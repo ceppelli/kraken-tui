@@ -1,0 +1,17 @@
+## Configuration
+Cargo.lock
+
+## Build
+/target
+
+## File system
+.DS_Store
+
+## rustfmt backups
+*.rs.bk
+
+## Editor
+/.idea/
+.vscode
+
+_*
