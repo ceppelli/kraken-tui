@@ -1,14 +1,24 @@
 
-
 #[derive(Debug, Default)]
 pub struct Model {
   pub name:String,
   pub index:i32,
 }
 
+fn print_msg(msg:String) {
+  println!("[print_msg] msg:{:?}", msg);
+}
+
+fn print_num(num:i32) {
+  println!("[print_num] number:{:?}", num);
+}
+
 fn main() {
   let x = Model::default();
-  println!(">> {:?}", x);
+  println!("[main] model:{:?}", x);
+
+  print_msg(x.name);
+  print_num(x.index);
 }
 
 
@@ -24,4 +34,13 @@ mod tests {
     assert_eq!(x.name, "");
     Ok(())
   }
+
+  // test print_msg
+  #[test]
+  fn test_print_msg() -> Result<(), String>{
+    let x = Model::default();
+    print_msg(x.name);
+    Ok(())
+  }
+
 }
