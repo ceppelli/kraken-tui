@@ -43,4 +43,12 @@ mod tests {
     Ok(())
   }
 
+  // test print_num
+  #[test]
+  fn test_print_num() -> Result<(), String>{
+    let x = Model::default();
+    print_num(x.index);
+    Ok(())
+  }
+
 }
