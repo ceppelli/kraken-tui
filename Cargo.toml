@@ -5,6 +5,20 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+# https://crates.io/crates/krakenrs
+krakenrs = "5.2.3"
+# https://crates.io/crates/crossterm
+crossterm = { version = "0.25", features = ["event-stream"], optional = false }
+# https://crates.io/crates/tui
+tui = { version = "0.19.0", features = ["crossterm"], default-features = false }
+# https://crates.io/crates/unicode-width
+unicode-width = "0.1.10"
+# https://crates.io/crates/serde
+serde = "1.0.150"
+# https://crates.io/crates/serde_json
+serde_json = "1.0.87"
+
 [[bin]]
 name = "main"
 path = "src/main.rs"

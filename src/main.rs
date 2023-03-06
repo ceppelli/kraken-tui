@@ -1,54 +1,59 @@
+mod app;
+mod kraken;
+mod stm;
+mod terminal;
+mod ui;
 
-#[derive(Debug, Default)]
-pub struct Model {
-  pub name:String,
-  pub index:i32,
-}
+use std::io;
 
-fn print_msg(msg:String) {
-  println!("[print_msg] msg:{:?}", msg);
-}
+use crossterm::event::{self, Event, KeyCode};
 
-fn print_num(num:i32) {
-  println!("[print_num] number:{:?}", num);
-}
+use tui::{backend::Backend, Terminal};
 
-fn main() {
-  let x = Model::default();
-  println!("[main] model:{:?}", x);
+use app::AppContext;
+use stm::{
+  core::{States, MainStm},
+  events,
+};
 
-  print_msg(x.name);
-  print_num(x.index);
-}
+const APP_ID: &str = "kraken";
+const APP_VERSION: &str = "0.0.1+";
 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+  // initialize terminal state
+  let mut xterm = terminal::XTerminal::new()?;
 
-// tests
-#[cfg(test)]
-mod tests {
-  use super::*;
+  // initialize app context and state machine
+  let mut ctx = AppContext::new(String::from(APP_ID), String::from(APP_VERSION));
+  let mut stm = MainStm::new("stm", true);
+  let res = run_app(&mut xterm.terminal, &mut ctx, &mut stm);
 
-  #[test]
-  fn test_default() -> Result<(), String>{
-    let x = Model::default();
-    assert_eq!(x.index, 0);
-    assert_eq!(x.name, "");
-    Ok(())
+  // check for errors
+  if let Err(err) = res {
+    println!("[main] {:?}", err)
   }
 
-  // test print_msg
-  #[test]
-  fn test_print_msg() -> Result<(), String>{
-    let x = Model::default();
-    print_msg(x.name);
-    Ok(())
-  }
+  // restore terminal state
+  xterm.restore()?;
 
-  // test print_num
-  #[test]
-  fn test_print_num() -> Result<(), String>{
-    let x = Model::default();
-    print_num(x.index);
-    Ok(())
-  }
+  print!("[main] app info {} completed!!!", ctx.info());
 
+  Ok(())
+}
+
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, ctx: &mut AppContext, stm: &mut MainStm) -> io::Result<()> {
+  // reset the state machine
+  stm.switch_state(States::Home);
+
+  loop {
+    terminal.draw(|f| stm.draw(f, ctx))?;
+
+    if let Event::Key(key) = event::read()? {
+      stm.on_event(events::Event::Key { key_code: key.code }, ctx);
+
+      if let KeyCode::Char('q') = key.code {
+        return Ok(())
+      }
+    }
+  }
 }

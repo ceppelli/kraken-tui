@@ -1,0 +1,4 @@
+# rustfmt --print-config default
+tab_spaces = 2
+#space_after_colon = false
+
