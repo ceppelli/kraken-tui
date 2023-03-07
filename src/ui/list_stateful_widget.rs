@@ -36,58 +36,60 @@ impl<T> StatefulList<T> {
   }
 
   pub fn next(&mut self) {
-      let i = match self.state.selected() {
-          Some(i) => {
-              if i >= self.items.len() - 1 {
-                  0
-              } else {
-                  i + 1
-              }
-          }
-          None => 0,
-      };
-      self.state.select(Some(i));
+    let i = match self.state.selected() {
+      Some(i) => {
+        if i >= self.items.len() - 1 {
+            0
+        } else {
+            i + 1
+        }
+      }
+      None => 0,
+    };
+    self.state.select(Some(i));
   }
 
   pub fn previous(&mut self) {
-      let i = match self.state.selected() {
-          Some(i) => {
-              if i == 0 {
-                  self.items.len() - 1
-              } else {
-                  i - 1
-              }
-          }
-          None => 0,
-      };
-      self.state.select(Some(i));
+    let i = match self.state.selected() {
+      Some(i) => {
+        if i == 0 && !self.items.is_empty() {
+            self.items.len() - 1
+        } else if i > 0 {
+            i - 1
+        } else {
+          0
+        }
+      }
+      None => 0,
+    };
+    self.state.select(Some(i));
   }
 
   pub fn unselect(&mut self) {
-      self.state.select(None);
+    self.state.select(None);
   }
 }
 
 pub fn draw_stateful_list<B:Backend>(f:&mut Frame<B>, bbox:Rect, title:&str, stateful_list:&mut StatefulList<String>, reverse:bool) {
 
   let mut items: Vec<ListItem> = stateful_list
-      .items
-      .iter()
-      .map(|message| {
-        /*ListItem::new(vec![
-          Spans::from(vec![
-            Span::raw(message), */
-            /*Span::raw(" "),
-            Span::styled(
-              "2020-01-01 10:00:00",
-              Style::default().add_modifier(Modifier::ITALIC),
-            ),*/
-          //]),
-          //Spans::from(vec![Span::raw("......")])
-        //])
-        ListItem::new(message.as_str())
-      })
-      .collect();
+    .items
+    .iter()
+    .map(|message| {
+      /*ListItem::new(vec![
+        Spans::from(vec![
+          Span::raw(message), */
+          /*Span::raw(" "),
+          Span::styled(
+            "2020-01-01 10:00:00",
+            Style::default().add_modifier(Modifier::ITALIC),
+          ),*/
+        //]),
+        //Spans::from(vec![Span::raw("......")])
+      //])
+      ListItem::new(message.as_str())
+    })
+    .collect();
 
   if reverse {
     items.reverse();
@@ -122,6 +124,8 @@ mod tests {
     let mut stateful_list = StatefulList::new();
     stateful_list.push("Hello");
     stateful_list.push("World");
+
+    assert_eq!(stateful_list.items.len(), 2);
     assert_eq!(stateful_list.state.selected(), None);
 
     stateful_list.next();
@@ -130,14 +134,54 @@ mod tests {
     stateful_list.next();
     assert_eq!(stateful_list.state.selected(), Some(1));
 
+    stateful_list.next();
+    assert_eq!(stateful_list.state.selected(), Some(0));
+
+    stateful_list.next();
+    assert_eq!(stateful_list.state.selected(), Some(1));
+
     stateful_list.previous();
     assert_eq!(stateful_list.state.selected(), Some(0));
 
     stateful_list.previous();
     assert_eq!(stateful_list.state.selected(), Some(1));
+
+    stateful_list.previous();
+    assert_eq!(stateful_list.state.selected(), Some(0));
 
     stateful_list.unselect();
     assert_eq!(stateful_list.state.selected(), None);
+  }
+
+  #[test]
+  fn test_stateful_list_reverse() {
+    let mut stateful_list = StatefulList::new();
+    stateful_list.push("Hello");
+    stateful_list.push("World");
+
+    assert_eq!(stateful_list.items.len(), 2);
+    assert_eq!(stateful_list.state.selected(), None);
+
+    stateful_list.previous();
+    assert_eq!(stateful_list.state.selected(), Some(0));
+
+    stateful_list.previous();
+    assert_eq!(stateful_list.state.selected(), Some(1));
+
+    stateful_list.previous();
+    assert_eq!(stateful_list.state.selected(), Some(0));
+
+    stateful_list.unselect();
+    assert_eq!(stateful_list.state.selected(), None);
+  }
+
+  #[test]
+  fn test_stateful_list_debug() {
+    let mut stateful_list = StatefulList::new();
+    stateful_list.push("Hello");
+    stateful_list.push("World");
+
+    assert_eq!(format!("{stateful_list:?}"), "StatefulList { state: ListState { offset: 0, selected: None }, items: [\"Hello\", \"World\"] }");
   }
 
   #[test]
@@ -191,6 +235,25 @@ mod tests {
       "└─────┘"
       ]);
     terminal.backend().assert_buffer(&expected);
+
+
+    terminal
+    .draw(|f| {
+        let size = f.size();
+
+        draw_stateful_list(f, size, " x ", &mut stateful_list, true);
+    })
+    .unwrap();
+
+    let expected = Buffer::with_lines(vec![
+      "┌ x ──┐",
+      "│World│",
+      "│Hello│",
+      "└─────┘"
+      ]);
+    terminal.backend().assert_buffer(&expected);
+
+
   }
 
 }

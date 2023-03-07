@@ -148,18 +148,7 @@ impl State for HomeState {
       Event::Key {
         key_code: KeyCode::Char('f'),
       } => {
-        ctx.debug(format!(
-          "[HomeS] on_event {:?} key_code: {:?}",
-          event, "e"
-        ));
         Some(States::Search)
-      }
-      Event::Key { key_code } => {
-        ctx.debug(format!(
-          "[HomeS] on_event {:?} key_code: {:?}",
-          event, key_code
-        ));
-        Some(States::Unknown)
       }
       _ => {
         ctx.debug(format!("[HomeS] on_event {:?} not match", event));
@@ -199,15 +188,6 @@ impl State for SearchState {
             for (key, info) in &result {
               ctx.model.kraken_assets_stateful.push(format!(" {} {} {} {} {}", key, info.altname, info.aclass, info.decimals, info.display_decimals));
             }
-            
-            /*let assests = result.iter()
-              .map(|(key, info)|  format!(" {} {} {} {} {}", key, info.altname, info.aclass, info.decimals, info.display_decimals))
-              .collect::<Vec<String>>();
-
-            assests.iter().for_each(|item| {
-              ctx.model.kraken_assets_stateful.push(item.to_string());
-            });*/
-
           },
           Err(error_code) => println!("[main] Error:{:?}", error_code)
         }
@@ -418,16 +398,134 @@ mod tests {
   use crate::stm::events::Event;
   use crossterm::event::KeyCode;
 
+
   #[test]
-  fn test_home_st() -> Result<(), String> {
+  fn test_unknown_state() -> Result<(), String> {
     let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
 
     let event = Event::Key {
-      key_code: KeyCode::Esc,
+      key_code: KeyCode::Esc
+    };
+
+    let unkwnown = UnknownState;
+    let to_state = unkwnown.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, Some(States::Home));
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_debug_state() -> Result<(), String> {
+    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+
+    let event = Event::Key {
+      key_code: KeyCode::Esc
+    };
+
+    let debug = DebugState;
+    let to_state = debug.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, Some(States::PreviousOne));
+
+
+    let event = Event::Key {
+      key_code: KeyCode::Down
+    };
+
+    let to_state = debug.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+
+    let event = Event::Key {
+      key_code: KeyCode::Up
+    };
+
+    let to_state = debug.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+    let event = Event::Key {
+      key_code: KeyCode::Left
+    };
+
+    let to_state = debug.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_home_state() -> Result<(), String> {
+    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+
+    let event = Event::Key {
+      key_code: KeyCode::Char('f'),
     };
 
     let home = HomeState;
-    home.on_event(event, &mut ctx);
+    let to_state = home.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, Some(States::Search));
+
+    let event = Event::Key {
+      key_code: KeyCode::Char('*'),
+    };
+
+    let to_state = home.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_search_state() -> Result<(), String> {
+    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+
+    let event = Event::Key {
+      key_code: KeyCode::Char('h'),
+    };
+
+    let search = SearchState;
+    let to_state = search.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, Some(States::Home));
+
+    let event = Event::Key {
+      key_code: KeyCode::Char('*'),
+    };
+
+    let to_state = search.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+    let event = Event::Key {
+      key_code: KeyCode::Down
+    };
+
+    let to_state = search.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+
+    let event = Event::Key {
+      key_code: KeyCode::Up
+    };
+
+    let to_state = search.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+
+    let event = Event::Key {
+      key_code: KeyCode::Left
+    };
+
+    let to_state = search.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
 
     Ok(())
   }
@@ -440,13 +538,77 @@ mod tests {
     assert_eq!(stm.name, "my_stm");
     assert!(matches!(stm.current_st, States::Unknown));
 
-    stm.switch_state(States::Search);
-    assert!(matches!(stm.current_st, States::Search));
-
+    // home
     let e = Event::Key {
       key_code: KeyCode::Esc,
     };
+
     stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Home));
+
+    // help
+    let e = Event::Key {
+      key_code: KeyCode::Char('?'),
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Help));
+
+    // home
+    let e = Event::Key {
+      key_code: KeyCode::Esc,
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Home));
+
+    // search
+    let e = Event::Key {
+      key_code: KeyCode::Char('f'),
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Search));
+
+    // help
+    let e = Event::Key {
+      key_code: KeyCode::Char('?'),
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Help));
+
+    // search
+    let e = Event::Key {
+      key_code: KeyCode::Esc,
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Search));
+
+    // debug
+    let e = Event::Key {
+      key_code: KeyCode::Char('D'),
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Debug));
+
+    // search
+    let e = Event::Key {
+      key_code: KeyCode::Esc,
+    };
+
+    stm.on_event(e, &mut ctx);
+
+    assert!(matches!(stm.current_st, States::Search));
 
     Ok(())
   }
