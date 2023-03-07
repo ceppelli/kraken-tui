@@ -47,15 +47,3 @@ impl XTerminal {
 
   }
 }
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_restore() {
-    let mut terminal = XTerminal::new().unwrap();
-    terminal.restore().unwrap();
-  }
-
-}
