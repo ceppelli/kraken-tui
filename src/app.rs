@@ -1,4 +1,4 @@
-use crate::kraken::client::Client;
+use crate::kraken::client::{Client, ClientImpl};
 use crate::ui::list_stateful_widget::StatefulList;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct AppContext {
   app_version: String,
 
   pub model: AppModel,
-  pub kraken_api: Client,
+  pub kraken_api: Box<dyn Client>,
 }
 
 impl AppContext {
@@ -30,7 +30,7 @@ impl AppContext {
       app_id,
       app_version,
       model: AppModel::new(),
-      kraken_api: Client::new(String::from("https://")),
+      kraken_api: Box::new(ClientImpl::new(String::from("https://"))),
     }
   }
 
@@ -43,15 +43,34 @@ impl AppContext {
   }
 }
 
+#[cfg(test)]
+mod mock_test {
+  use super::{AppContext, AppModel};
+  use crate::kraken::client::Client;
+
+  impl AppContext {
+    #[allow(unused)]
+    pub fn new_for_testing(kraken_api: Box<dyn Client>) -> Self {
+      Self {
+        app_id: String::from("_app_id_"),
+        app_version: String::from("_app_version_"),
+        model: AppModel::new(),
+        kraken_api,
+      }
+    }
+  }
+}
+
 // tests
 #[cfg(test)]
 mod tests {
 
   use super::*;
+  use crate::kraken::client::MockClient;
 
   #[test]
   fn test_app_context() {
-    let ctx = AppContext::new(String::from("app_id"), String::from("app_version"));
+    let ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
     assert_eq!(ctx.app_id, String::from("app_id"));
     assert_eq!(ctx.app_version, String::from("app_version"));
     assert_eq!(ctx.model.debug_messages_stateful.items.len(), 0);

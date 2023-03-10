@@ -395,8 +395,9 @@ impl MainStm<'_> {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::stm::events::Event;
+  use crate::{stm::events::Event, kraken::client::MockClient};
   use crossterm::event::KeyCode;
+  use krakenrs::AssetsResponse;
 
 
   #[test]
@@ -417,7 +418,7 @@ mod tests {
 
   #[test]
   fn test_debug_state() -> Result<(), String> {
-    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
 
     let event = Event::Key {
       key_code: KeyCode::Esc
@@ -459,7 +460,7 @@ mod tests {
 
   #[test]
   fn test_home_state() -> Result<(), String> {
-    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
 
     let event = Event::Key {
       key_code: KeyCode::Char('f'),
@@ -483,7 +484,7 @@ mod tests {
 
   #[test]
   fn test_search_state() -> Result<(), String> {
-    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
 
     let event = Event::Key {
       key_code: KeyCode::Char('h'),
@@ -510,7 +511,6 @@ mod tests {
 
     assert_eq!(to_state, None);
 
-
     let event = Event::Key {
       key_code: KeyCode::Up
     };
@@ -531,8 +531,33 @@ mod tests {
   }
 
   #[test]
+  fn test_search_state_list_assets() -> Result<(), String> {
+    let mut mock_client = Box::new(MockClient::new());
+    mock_client.expect_connect()
+    .once()
+    .returning(|| Ok("OK".to_string()));
+    mock_client.expect_list_assets()
+    .once()
+    .returning(|| AssetsResponse::new());
+    let mut ctx = AppContext::new_for_testing(mock_client);
+
+    let event = Event::Key {
+      key_code: KeyCode::Char('l'),
+    };
+
+    let search = SearchState;
+    let to_state = search.on_event(event, &mut ctx);
+
+    assert_eq!(to_state, None);
+    assert_eq!(ctx.model.kraken_assets_stateful.items.len(), 0);
+    assert_eq!(ctx.model.kraken_assets_stateful.state.selected(), None);
+
+    Ok(())
+  }
+
+  #[test]
   fn test_stm() -> Result<(), String> {
-    let mut ctx = AppContext::new(String::from("APP_ID"), String::from("APP_VERSION"));
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
 
     let mut stm = MainStm::new("my_stm", false);
     assert_eq!(stm.name, "my_stm");
