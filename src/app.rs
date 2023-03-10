@@ -71,12 +71,12 @@ mod tests {
   #[test]
   fn test_app_context() {
     let ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
-    assert_eq!(ctx.app_id, String::from("app_id"));
-    assert_eq!(ctx.app_version, String::from("app_version"));
+    assert_eq!(ctx.app_id, String::from("_app_id_"));
+    assert_eq!(ctx.app_version, String::from("_app_version_"));
     assert_eq!(ctx.model.debug_messages_stateful.items.len(), 0);
     assert_eq!(
       ctx.info(),
-      String::from("AppId:app_id, AppVersion:app_version\n")
+      String::from("AppId:_app_id_, AppVersion:_app_version_\n")
     );
   }
 
