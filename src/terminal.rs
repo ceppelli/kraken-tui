@@ -6,13 +6,10 @@ use crossterm::{
 
 use std::io::{self, Stdout};
 
-use tui::{
-  backend::{CrosstermBackend},
-  Terminal
-};
+use tui::{backend::CrosstermBackend, Terminal};
 
 pub struct XTerminal {
-  pub terminal:tui::Terminal<CrosstermBackend<Stdout>>,
+  pub terminal: tui::Terminal<CrosstermBackend<Stdout>>,
 }
 
 impl XTerminal {
@@ -24,26 +21,20 @@ impl XTerminal {
     let backend = CrosstermBackend::new(stdout);
     let terminal = Terminal::new(backend)?;
 
-    Ok(
-      XTerminal{
-        terminal
-      }
-    )
+    Ok(XTerminal { terminal })
   }
 
-  pub fn restore(&mut self) -> io::Result<()>{
-
+  pub fn restore(&mut self) -> io::Result<()> {
     // restore terminal
     disable_raw_mode()?;
     execute!(
-        self.terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
+      self.terminal.backend_mut(),
+      LeaveAlternateScreen,
+      DisableMouseCapture
     )?;
 
     self.terminal.show_cursor()?;
 
     Ok(())
-
   }
 }

@@ -1,14 +1,16 @@
-use krakenrs::{KrakenRestAPI, KrakenRestConfig, AssetsResponse};
-use serde_json::to_string_pretty;
+use krakenrs::{
+  AssetPairsResponse, AssetsResponse, KrakenRestAPI, KrakenRestConfig, TickerResponse,
+};
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
 #[cfg_attr(test, automock)]
 pub trait Client {
-  fn connect(&mut self) -> Result<String, krakenrs::Error>;
+  fn connect(&mut self) -> Result<(), krakenrs::Error>;
   fn disconnect(&self) -> Result<(), krakenrs::Error>;
-  fn list_assets(&self) -> AssetsResponse;
-  fn list_pairs(&self) -> Result<String, krakenrs::Error>;
+  fn list_assets(&self) -> Option<AssetsResponse>;
+  fn list_asset_pairs(&self) -> Option<AssetPairsResponse>;
+  fn ticker(&self, asset_pair: &str) -> Option<TickerResponse>;
 }
 
 #[allow(unused)]
@@ -19,62 +21,58 @@ pub struct ClientImpl {
 
 impl ClientImpl {
   pub fn new(url: String) -> ClientImpl {
-    ClientImpl {
-      url,
-      api: None,
-    }
+    ClientImpl { url, api: None }
   }
 }
 
 #[allow(unused)]
 impl Client for ClientImpl {
-  fn connect(&mut self) -> Result<String, krakenrs::Error> {
+  fn connect(&mut self) -> Result<(), krakenrs::Error> {
     let kc_config = KrakenRestConfig::default();
-    let api= KrakenRestAPI::try_from(kc_config);
+    let api = KrakenRestAPI::try_from(kc_config);
     match api {
       Ok(api) => {
         self.api = Some(api);
+        Ok(())
       },
-      Err(_) => todo!(),
+      Err(e) => Err(e),
     }
-
-    Ok("OK".to_string())
   }
 
-  fn list_assets(&self) -> AssetsResponse {
+  fn list_assets(&self) -> Option<AssetsResponse> {
     if let Some(api) = &self.api {
-      let assets = api.assets();
-      let result: AssetsResponse = assets.unwrap_or_default();
-      return result;
+      let result = api.assets();
+      return match result {
+        Ok(assets) => return Some(assets),
+        Err(_) => return None,
+      };
     }
 
-    Default::default()
+    None
   }
 
-  fn list_pairs(&self) -> Result<String, krakenrs::Error> {
-
+  fn list_asset_pairs(&self) -> Option<AssetPairsResponse> {
     if let Some(api) = &self.api {
-
-      let s = api.asset_pairs(vec![
-        //String::from("BTC/USD"),
-        String::from("SOL/BTC"),
-      ])?;
-
-      println!("{}", to_string_pretty(&s).unwrap());
-
-      println!(
-        "{}",
-        to_string_pretty(
-          &api
-            .ticker(vec![String::from("BTC/USD")])
-            .expect("api call failed")
-        )
-        .unwrap()
-      );
-
+      let result = api.asset_pairs(vec![]);
+      return match result {
+        Ok(asset_pairs) => Some(asset_pairs),
+        Err(e) => None,
+      };
     }
 
-    Ok("OK".to_string())
+    None
+  }
+
+  fn ticker(&self, asset_pair: &str) -> Option<TickerResponse> {
+    if let Some(api) = &self.api {
+      let result = api.ticker(vec![asset_pair.to_owned()]);
+      return match result {
+        Ok(asset_pairs) => Some(asset_pairs),
+        Err(_) => None,
+      };
+    }
+
+    None
   }
 
   fn disconnect(&self) -> Result<(), krakenrs::Error> {
