@@ -40,8 +40,9 @@ impl State for UnknownState {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::stm::events::Event;
+  use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
+  use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
   #[test]
   fn test_unknown_state() -> Result<(), String> {
@@ -53,6 +54,39 @@ mod tests {
     let to_state = unkwnown.on_event(event, &mut ctx);
 
     assert_eq!(to_state, Some(States::Home));
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_ui() {
+    let backend = TestBackend::new(7, 4);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+
+    let state = UnknownState;
+
+    terminal
+      .draw(|f| {
+        state.ui(f, &mut ctx);
+      })
+      .unwrap();
+
+    #[rustfmt::skip]
+    let expected = Buffer::with_lines(vec![
+      " Unkn─╮",
+      " Po─╮ │",
+      "│     │",
+      "╰─────╯"
+      ]);
+
+    terminal.backend().assert_buffer(&expected);
+  }
+
+  #[test]
+  fn test_state_help() -> Result<(), String> {
+    let state = UnknownState;
+    assert_eq!(state.help_text().len(), 23);
 
     Ok(())
   }

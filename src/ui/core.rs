@@ -59,18 +59,11 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 pub fn split_columns(_columns: usize, r: Rect) -> Vec<Rect> {
-
   Layout::default()
     .direction(Direction::Horizontal)
     .vertical_margin(1)
     .horizontal_margin(2)
-    .constraints(
-      [
-        Constraint::Percentage(50),
-        Constraint::Percentage(50),
-      ]
-      .as_ref(),
-    )
+    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
     .split(r)
 }
 

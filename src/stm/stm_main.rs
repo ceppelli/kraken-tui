@@ -37,7 +37,7 @@ impl MainStm<'_> {
       unknow_st: UnknownState,
       debug_st: DebugState,
       help_st: HelpState,
-      home_st: HomeState { on_enter_first: true },
+      home_st: HomeState::default(),
       search_st: SearchState::default(),
 
       trace,

@@ -22,3 +22,31 @@ impl State for HelpState {
 
   fn ui<B: Backend>(&self, _f: &mut Frame<B>, _ctx: &mut AppContext) {}
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::{kraken::client::MockClient, stm::events::Event};
+  use crossterm::event::KeyCode;
+
+  #[test]
+  fn test_home_state() -> Result<(), String> {
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+
+    let mut help = HelpState;
+
+    let event = Event::Key { key_code: KeyCode::Char('*') };
+    let to_state = help.on_event(event, &mut ctx);
+    assert_eq!(to_state, None);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_state_help() -> Result<(), String> {
+    let state = HelpState;
+    assert_eq!(state.help_text().len(), 14);
+
+    Ok(())
+  }
+}

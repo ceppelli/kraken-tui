@@ -47,6 +47,7 @@ mod tests {
   use super::*;
   use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
+  use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
   #[test]
   fn test_debug_state() -> Result<(), String> {
@@ -69,6 +70,39 @@ mod tests {
     let event = Event::Key { key_code: KeyCode::Left };
     let to_state = debug.on_event(event, &mut ctx);
     assert_eq!(to_state, None);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_ui() {
+    let backend = TestBackend::new(7, 4);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+
+    let state = DebugState;
+
+    terminal
+      .draw(|f| {
+        state.ui(f, &mut ctx);
+      })
+      .unwrap();
+
+    #[rustfmt::skip]
+    let expected = Buffer::with_lines(vec![
+      "┌debu┐╮",
+      "│    ││",
+      "└────┘│",
+      "╰─────╯"
+      ]);
+
+    terminal.backend().assert_buffer(&expected);
+  }
+
+  #[test]
+  fn test_state_help() -> Result<(), String> {
+    let state = DebugState;
+    assert_eq!(state.help_text().len(), 14);
 
     Ok(())
   }

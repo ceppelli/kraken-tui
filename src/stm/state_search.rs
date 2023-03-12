@@ -20,10 +20,7 @@ pub struct SearchState {
 
 impl Default for SearchState {
   fn default() -> Self {
-    Self {
-      on_enter_first: true,
-      avtive_column: ActiveColumn::Assets,
-    }
+    Self { on_enter_first: true, avtive_column: ActiveColumn::Assets }
   }
 }
 
@@ -36,7 +33,6 @@ impl SearchState {
       let asset_opt = ctx.model.assets_stateful.items.get(index);
 
       if let Some(asset) = asset_opt {
-
         let pairs = ctx
           .model
           .asset_pairs
@@ -87,7 +83,7 @@ impl State for SearchState {
           },
           ActiveColumn::AssetPairs => {
             ctx.model.asset_pairs_stateful.next();
-          }
+          },
         }
         None
       },
@@ -99,7 +95,7 @@ impl State for SearchState {
           },
           ActiveColumn::AssetPairs => {
             ctx.model.asset_pairs_stateful.previous();
-          }
+          },
         }
         None
       },
@@ -112,20 +108,19 @@ impl State for SearchState {
           ActiveColumn::AssetPairs => {
             self.avtive_column = ActiveColumn::Assets;
             ctx.model.asset_pairs_stateful.unselect();
-          }
+          },
         }
         None
       },
       Event::Key { key_code: KeyCode::Right } => {
         match self.avtive_column {
-            ActiveColumn::Assets => {
-              if !ctx.model.asset_pairs_stateful.items.is_empty() {
-                self.avtive_column = ActiveColumn::AssetPairs;
-                ctx.model.asset_pairs_stateful.next();
-              }
-            },
-            ActiveColumn::AssetPairs => {
+          ActiveColumn::Assets => {
+            if !ctx.model.asset_pairs_stateful.items.is_empty() {
+              self.avtive_column = ActiveColumn::AssetPairs;
+              ctx.model.asset_pairs_stateful.next();
             }
+          },
+          ActiveColumn::AssetPairs => {},
         }
         None
       },
@@ -180,6 +175,7 @@ mod tests {
   use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
   use krakenrs::AssetPairsResponse;
+  use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
   #[test]
   fn test_search_state() -> Result<(), String> {
@@ -232,6 +228,39 @@ mod tests {
     assert_eq!(ctx.model.asset_pairs.len(), 0);
     assert_eq!(ctx.model.assets_stateful.items.len(), 0);
     assert_eq!(ctx.model.assets_stateful.state.selected(), None);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_ui() {
+    let backend = TestBackend::new(7, 4);
+    let mut terminal = Terminal::new(backend).unwrap();
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+
+    let state = SearchState::default();
+
+    terminal
+      .draw(|f| {
+        state.ui(f, &mut ctx);
+      })
+      .unwrap();
+
+    #[rustfmt::skip]
+    let expected = Buffer::with_lines(vec![
+      " Sear─╮",
+      "│ ┌┌┐ │",
+      "│ └└┘ │",
+      "╰─────╯"
+      ]);
+
+    terminal.backend().assert_buffer(&expected);
+  }
+
+  #[test]
+  fn test_state_help() -> Result<(), String> {
+    let state = SearchState::default();
+    assert_eq!(state.help_text().len(), 168);
 
     Ok(())
   }

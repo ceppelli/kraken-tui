@@ -9,6 +9,12 @@ pub struct HomeState {
   pub on_enter_first: bool,
 }
 
+impl Default for HomeState {
+  fn default() -> Self {
+    Self { on_enter_first: true }
+  }
+}
+
 impl State for HomeState {
   fn on_enter_once(&mut self, ctx: &mut AppContext) {
     self.on_enter_first = false;
@@ -80,7 +86,7 @@ mod tests {
   fn test_home_state() -> Result<(), String> {
     let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
 
-    let mut home = HomeState { on_enter_first: true };
+    let mut home = HomeState::default();
 
     let event = Event::Key { key_code: KeyCode::Char('f') };
     let to_state = home.on_event(event, &mut ctx);
@@ -89,6 +95,14 @@ mod tests {
     let event = Event::Key { key_code: KeyCode::Char('*') };
     let to_state = home.on_event(event, &mut ctx);
     assert_eq!(to_state, None);
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_state_help() -> Result<(), String> {
+    let state = HomeState::default();
+    assert_eq!(state.help_text().len(), 73);
 
     Ok(())
   }
