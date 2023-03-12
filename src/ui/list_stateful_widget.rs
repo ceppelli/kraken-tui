@@ -1,6 +1,6 @@
 #[allow(unused_imports)]
 use tui::{
-  backend::{Backend},
+  backend::Backend,
   layout::{Corner, Rect},
   style::{Color, Modifier, Style},
   text::{Span, Spans},
@@ -16,22 +16,15 @@ pub struct StatefulList<T> {
 
 #[allow(unused)]
 impl<T> StatefulList<T> {
-
   pub fn new() -> StatefulList<T> {
-    StatefulList {
-      state: ListState::default(),
-      items: Vec::new(),
-    }
+    StatefulList { state: ListState::default(), items: Vec::new() }
   }
 
   pub fn with_items(items: Vec<T>) -> StatefulList<T> {
-      StatefulList {
-          state: ListState::default(),
-          items,
-      }
+    StatefulList { state: ListState::default(), items }
   }
 
-  pub fn push(&mut self, item:T) {
+  pub fn push(&mut self, item: T) {
     self.items.push(item);
   }
 
@@ -39,11 +32,11 @@ impl<T> StatefulList<T> {
     let i = match self.state.selected() {
       Some(i) => {
         if i >= self.items.len() - 1 {
-            0
+          0
         } else {
-            i + 1
+          i + 1
         }
-      }
+      },
       None => 0,
     };
     self.state.select(Some(i));
@@ -53,13 +46,13 @@ impl<T> StatefulList<T> {
     let i = match self.state.selected() {
       Some(i) => {
         if i == 0 && !self.items.is_empty() {
-            self.items.len() - 1
+          self.items.len() - 1
         } else if i > 0 {
-            i - 1
+          i - 1
         } else {
           0
         }
-      }
+      },
       None => 0,
     };
     self.state.select(Some(i));
@@ -68,27 +61,24 @@ impl<T> StatefulList<T> {
   pub fn unselect(&mut self) {
     self.state.select(None);
   }
+
+  pub fn clear(&mut self) {
+    self.items.clear();
+    self.state.select(None);
+  }
 }
 
-pub fn draw_stateful_list<B:Backend>(f:&mut Frame<B>, bbox:Rect, title:&str, stateful_list:&mut StatefulList<String>, reverse:bool) {
-
+pub fn draw_stateful_list<B: Backend>(
+  f: &mut Frame<B>,
+  bbox: Rect,
+  title: &str,
+  stateful_list: &mut StatefulList<String>,
+  reverse: bool,
+) {
   let mut items: Vec<ListItem> = stateful_list
     .items
     .iter()
-    .map(|message| {
-      /*ListItem::new(vec![
-        Spans::from(vec![
-          Span::raw(message), */
-          /*Span::raw(" "),
-          Span::styled(
-            "2020-01-01 10:00:00",
-            Style::default().add_modifier(Modifier::ITALIC),
-          ),*/
-        //]),
-        //Spans::from(vec![Span::raw("......")])
-      //])
-      ListItem::new(message.as_str())
-    })
+    .map(|message| ListItem::new(message.as_str()))
     .collect();
 
   if reverse {
@@ -99,9 +89,9 @@ pub fn draw_stateful_list<B:Backend>(f:&mut Frame<B>, bbox:Rect, title:&str, sta
     .block(Block::default().borders(Borders::ALL).title(title))
     .highlight_style(
       Style::default()
-       .bg(Color::White)
-       .fg(Color::Black)
-       .add_modifier(Modifier::BOLD)
+        .bg(Color::White)
+        .fg(Color::Black)
+        .add_modifier(Modifier::BOLD),
     )
     .start_corner(Corner::TopLeft);
 
@@ -111,13 +101,8 @@ pub fn draw_stateful_list<B:Backend>(f:&mut Frame<B>, bbox:Rect, title:&str, sta
 // tests
 #[cfg(test)]
 mod tests {
-  use tui::{
-      backend::TestBackend,
-      buffer::Buffer,
-      Terminal,
-  };
-
   use super::*;
+  use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
   #[test]
   fn test_stateful_list() {
@@ -186,10 +171,7 @@ mod tests {
 
   #[test]
   fn test_stateful_list_with_items() {
-    let mut stateful_list = StatefulList::with_items(vec![
-      "Hello",
-      "World",
-    ]);
+    let mut stateful_list = StatefulList::with_items(vec!["Hello", "World"]);
 
     assert_eq!(stateful_list.items.len(), 2);
     assert_eq!(stateful_list.state.selected(), None);
@@ -215,19 +197,18 @@ mod tests {
     let backend = TestBackend::new(7, 4);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let mut stateful_list = StatefulList::with_items(vec![
-      String::from("Hello"),
-      String::from("World"),
-    ]);
+    let mut stateful_list =
+      StatefulList::with_items(vec![String::from("Hello"), String::from("World")]);
 
     terminal
-    .draw(|f| {
+      .draw(|f| {
         let size = f.size();
 
         draw_stateful_list(f, size, " x ", &mut stateful_list, false);
-    })
-    .unwrap();
+      })
+      .unwrap();
 
+    #[rustfmt::skip]
     let expected = Buffer::with_lines(vec![
       "┌ x ──┐",
       "│Hello│",
@@ -236,15 +217,15 @@ mod tests {
       ]);
     terminal.backend().assert_buffer(&expected);
 
-
     terminal
-    .draw(|f| {
+      .draw(|f| {
         let size = f.size();
 
         draw_stateful_list(f, size, " x ", &mut stateful_list, true);
-    })
-    .unwrap();
+      })
+      .unwrap();
 
+    #[rustfmt::skip]
     let expected = Buffer::with_lines(vec![
       "┌ x ──┐",
       "│World│",
@@ -252,8 +233,5 @@ mod tests {
       "└─────┘"
       ]);
     terminal.backend().assert_buffer(&expected);
-
-
   }
-
 }

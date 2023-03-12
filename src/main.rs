@@ -3,18 +3,12 @@ mod kraken;
 mod stm;
 mod terminal;
 mod ui;
-
 use std::io;
 
-use crossterm::event::{self, Event, KeyCode};
-
-use tui::{backend::Backend, Terminal};
-
 use app::AppContext;
-use stm::{
-  core::{MainStm, States},
-  events,
-};
+use crossterm::event::{self, Event, KeyCode};
+use stm::{events, stm_main::MainStm, States};
+use tui::{backend::Backend, Terminal};
 
 const APP_ID: &str = "kraken";
 const APP_VERSION: &str = "0.0.1+";
@@ -48,7 +42,7 @@ fn run_app<B: Backend>(
   looping: bool,
 ) -> io::Result<()> {
   // reset the state machine
-  stm.switch_state(States::Home);
+  stm.switch_state(States::Home, ctx);
 
   loop {
     terminal.draw(|f| stm.draw(f, ctx))?;
@@ -69,9 +63,10 @@ fn run_app<B: Backend>(
 
 #[cfg(test)]
 mod tests {
-  use tui::{backend::TestBackend, Terminal};
-
   use super::*;
+  use crate::kraken::client::MockClient;
+  use krakenrs::AssetsResponse;
+  use tui::{backend::TestBackend, Terminal};
 
   #[test]
   fn test_app_id() {
@@ -86,13 +81,18 @@ mod tests {
   #[test]
   fn test_run_app() {
     let backend = TestBackend::new(7, 4);
-    let terminal = &mut Terminal::new(backend).unwrap();
+    let mut terminal = Terminal::new(backend).unwrap();
 
-    let ctx = &mut AppContext::new(String::from(APP_ID), String::from(APP_VERSION));
+    let mut mock_client = Box::new(MockClient::new());
+    mock_client.expect_connect().once().returning(|| Ok(()));
+    mock_client
+      .expect_list_assets()
+      .once()
+      .returning(|| Some(AssetsResponse::new()));
+    let mut ctx = AppContext::new_for_testing(mock_client);
+    let mut stm = MainStm::new("stm", false);
 
-    let stm = &mut MainStm::new("stm", false);
-
-    let result = run_app(terminal, ctx, stm, false);
+    let result = run_app(&mut terminal, &mut ctx, &mut stm, false);
 
     assert!(result.is_ok());
     assert_eq!(stm.current_st, States::Home);

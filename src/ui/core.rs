@@ -58,12 +58,20 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     .split(popup_layout[1])[1]
 }
 
+pub fn split_columns(_columns: usize, r: Rect) -> Vec<Rect> {
+  Layout::default()
+    .direction(Direction::Horizontal)
+    .vertical_margin(1)
+    .horizontal_margin(2)
+    .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+    .split(r)
+}
+
 // tests
 #[cfg(test)]
 mod tests {
-  use tui::{backend::TestBackend, buffer::Buffer, Terminal};
-
   use super::*;
+  use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
   #[test]
   fn test_draw_box_with_title() {
@@ -78,12 +86,13 @@ mod tests {
       })
       .unwrap();
 
-      let expected = Buffer::with_lines(vec![
-        "╭─ x ─╮",
-        "│     │",
-        "│     │",
-        "╰─────╯"
-        ]);
+    #[rustfmt::skip]
+    let expected = Buffer::with_lines(vec![
+      "╭─ x ─╮",
+      "│     │",
+      "│     │",
+      "╰─────╯"
+      ]);
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -100,10 +109,11 @@ mod tests {
       })
       .unwrap();
 
-      let expected = Buffer::with_lines(vec![
-        "abc xyz",
-        "123    "
-        ]);
+    #[rustfmt::skip]
+    let expected = Buffer::with_lines(vec![
+      "abc xyz",
+      "123    "
+      ]);
     terminal.backend().assert_buffer(&expected);
   }
 
@@ -120,13 +130,13 @@ mod tests {
       })
       .unwrap();
 
-
-      let expected = Buffer::with_lines(vec![
-        "       ",
-        "       ",
-        "       ",
-        "       "
-        ]);
+    #[rustfmt::skip]
+    let expected = Buffer::with_lines(vec![
+      "       ",
+      "       ",
+      "       ",
+      "       "
+      ]);
 
     terminal.backend().assert_buffer(&expected);
   }
