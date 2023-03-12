@@ -41,8 +41,6 @@ impl SearchState {
           .filter_map(|(_, pair)| pair.wsname.as_ref().map(|wsname| wsname.to_owned()))
           .collect::<Vec<String>>();
 
-        ctx.debug(format!(" len: {}", pairs.len()));
-
         for alt_name in pairs {
           ctx.model.asset_pairs_stateful.push(alt_name);
         }
@@ -124,6 +122,35 @@ impl State for SearchState {
         }
         None
       },
+      Event::Key { key_code: KeyCode::Enter } => {
+        match self.avtive_column {
+          ActiveColumn::Assets => {},
+          ActiveColumn::AssetPairs => {
+            if let Some(index) = ctx.model.asset_pairs_stateful.state.selected() {
+              let asset_pair_opt = ctx.model.asset_pairs_stateful.items.get(index);
+
+              if let Some(asset_pair) = asset_pair_opt {
+                let pairs = ctx
+                  .model
+                  .asset_pairs
+                  .iter()
+                  .filter(|(_, pair)| pair.wsname == Some(asset_pair.to_owned()))
+                  .filter_map(|(_, pair)| pair.wsname.as_ref().map(|wsname| wsname.to_owned()))
+                  .collect::<Vec<_>>();
+
+                if !pairs.is_empty() {
+                  let key = &pairs[0];
+                  ctx
+                    .model
+                    .favorites_asset_pairs_stateful
+                    .push(key.to_owned());
+                }
+              }
+            }
+          },
+        }
+        None
+      },
       Event::Key { key_code: KeyCode::Char('h') } => Some(States::Home),
       _ => {
         ctx.debug(format!("[SearchS] on_event {:?} not match", event));
@@ -163,6 +190,7 @@ impl State for SearchState {
       DOWN   -> next
       LEFT   -> previous
       RIGHT  -> select
+      ENTER  -> add to favorites
       h      -> home
       D      -> show Debug
     "##
@@ -178,36 +206,44 @@ mod tests {
   use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
   #[test]
-  fn test_search_state() -> Result<(), String> {
+  fn test_on_event() -> Result<(), String> {
     let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
 
-    let mut search = SearchState::default();
+    let mut state = SearchState::default();
 
     let event = Event::Key { key_code: KeyCode::Char('h') };
-    let to_state = search.on_event(event, &mut ctx);
+    let to_state = state.on_event(event, &mut ctx);
     assert_eq!(to_state, Some(States::Home));
 
     let event = Event::Key { key_code: KeyCode::Char('*') };
-    let to_state = search.on_event(event, &mut ctx);
+    let to_state = state.on_event(event, &mut ctx);
     assert_eq!(to_state, None);
 
     let event = Event::Key { key_code: KeyCode::Down };
-    let to_state = search.on_event(event, &mut ctx);
+    let to_state = state.on_event(event, &mut ctx);
     assert_eq!(to_state, None);
 
     let event = Event::Key { key_code: KeyCode::Up };
-    let to_state = search.on_event(event, &mut ctx);
+    let to_state = state.on_event(event, &mut ctx);
     assert_eq!(to_state, None);
 
     let event = Event::Key { key_code: KeyCode::Left };
-    let to_state = search.on_event(event, &mut ctx);
+    let to_state = state.on_event(event, &mut ctx);
+    assert_eq!(to_state, None);
+
+    let event = Event::Key { key_code: KeyCode::Right };
+    let to_state = state.on_event(event, &mut ctx);
+    assert_eq!(to_state, None);
+
+    let event = Event::Key { key_code: KeyCode::Enter };
+    let to_state = state.on_event(event, &mut ctx);
     assert_eq!(to_state, None);
 
     Ok(())
   }
 
   #[test]
-  fn test_search_state_list_assets() -> Result<(), String> {
+  fn test_list_asset_pairs() -> Result<(), String> {
     let mut mock_client = Box::new(MockClient::new());
     mock_client
       .expect_list_asset_pairs()
@@ -215,19 +251,84 @@ mod tests {
       .returning(|| Some(AssetPairsResponse::new()));
     let mut ctx = AppContext::new_for_testing(mock_client);
 
-    let event = Event::Key { key_code: KeyCode::Char('l') };
+    ctx.model.assets_stateful.push("key_0".to_owned());
+    ctx.model.assets_stateful.push("key_1".to_owned());
+    ctx.model.assets_stateful.push("key_2".to_owned());
 
-    let mut search = SearchState::default();
-    search.on_enter_once(&mut ctx);
+    let event = Event::Key { key_code: KeyCode::Down };
 
-    assert_eq!(search.on_enter_first, false);
+    let mut state = SearchState::default();
+    state.on_enter_once(&mut ctx);
 
-    let to_state = search.on_event(event, &mut ctx);
+    assert_eq!(state.on_enter_first, false);
+
+    let to_state = state.on_event(event, &mut ctx);
 
     assert_eq!(to_state, None);
     assert_eq!(ctx.model.asset_pairs.len(), 0);
-    assert_eq!(ctx.model.assets_stateful.items.len(), 0);
-    assert_eq!(ctx.model.assets_stateful.state.selected(), None);
+    assert_eq!(ctx.model.assets_stateful.items.len(), 3);
+    assert_eq!(ctx.model.assets_stateful.state.selected(), Some(0));
+
+    Ok(())
+  }
+
+  #[test]
+  fn test_asset_pair_select() -> Result<(), String> {
+    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+
+    ctx.model.asset_pairs_stateful.push("ETH/USDC".to_owned());
+    ctx.model.asset_pairs_stateful.push("pair_1".to_owned());
+    ctx.model.asset_pairs_stateful.push("pair_2".to_owned());
+
+    let asset_pairs_json = r#"{
+      "ETHUSDC": {
+        "alt_name": null,
+        "wsname": "ETH/USDC",
+        "aclass_base": "currency",
+        "base": "XETH",
+        "aclass_quote": "currency",
+        "quote": "USDC",
+        "pair_decimals": 2,
+        "lot_decimals": 8,
+        "lot_multiplier": 1,
+        "fees": [
+          [
+            "0",
+            "0.26"
+          ],
+          [
+            "50000",
+            "0.24"
+          ]
+        ],
+        "ordermin": "0.01"
+      }
+    }"#;
+
+    ctx.model.asset_pairs = serde_json::from_str(asset_pairs_json).unwrap();
+    assert_eq!(ctx.model.asset_pairs.len(), 1);
+
+    let mut state = SearchState::default();
+    state.avtive_column = ActiveColumn::AssetPairs;
+
+    let event = Event::Key { key_code: KeyCode::Down };
+    let to_state = state.on_event(event, &mut ctx);
+    assert_eq!(to_state, None);
+
+    assert_eq!(ctx.model.asset_pairs.len(), 1);
+    assert_eq!(ctx.model.asset_pairs_stateful.items.len(), 3);
+    assert_eq!(ctx.model.asset_pairs_stateful.state.selected(), Some(0));
+
+    let event = Event::Key { key_code: KeyCode::Enter };
+
+    let to_state = state.on_event(event, &mut ctx);
+    assert_eq!(to_state, None);
+
+    assert_eq!(ctx.model.favorites_asset_pairs_stateful.items.len(), 1);
+    assert_eq!(
+      ctx.model.favorites_asset_pairs_stateful.state.selected(),
+      None
+    );
 
     Ok(())
   }
@@ -260,7 +361,7 @@ mod tests {
   #[test]
   fn test_state_help() -> Result<(), String> {
     let state = SearchState::default();
-    assert_eq!(state.help_text().len(), 168);
+    assert_eq!(state.help_text().len(), 201);
 
     Ok(())
   }

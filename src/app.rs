@@ -6,11 +6,11 @@ use krakenrs::{AssetPairsResponse, AssetsResponse};
 pub struct AppModel {
   pub assets: AssetsResponse,
   pub asset_pairs: AssetPairsResponse,
-  pub favorites_asset_pairs: Vec<String>,
   pub debug_messages_stateful: StatefulList<String>,
   pub assets_stateful: StatefulList<String>,
   pub asset_pairs_stateful: StatefulList<String>,
   pub favorites_asset_pairs_stateful: StatefulList<String>,
+  pub favorites_asset_pairs_info_stateful: StatefulList<String>,
 }
 
 impl AppModel {
@@ -18,11 +18,11 @@ impl AppModel {
     AppModel {
       assets: AssetsResponse::new(),
       asset_pairs: AssetPairsResponse::new(),
-      favorites_asset_pairs: Vec::new(),
       debug_messages_stateful: StatefulList::new(),
       assets_stateful: StatefulList::new(),
       asset_pairs_stateful: StatefulList::new(),
       favorites_asset_pairs_stateful: StatefulList::new(),
+      favorites_asset_pairs_info_stateful: StatefulList::new(),
     }
   }
 }

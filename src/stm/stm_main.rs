@@ -101,7 +101,7 @@ impl MainStm<'_> {
           self.switch_state(to_state, ctx);
         }
       },
-      (States::Home, Event::Key { key_code: KeyCode::Char('f') }) => {
+      (States::Home, _) => {
         if let Some(to_state) = self.home_st.on_event(event, ctx) {
           self.switch_state(to_state, ctx);
         }
