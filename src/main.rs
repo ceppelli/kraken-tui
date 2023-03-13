@@ -13,6 +13,26 @@ use tui::{backend::Backend, Terminal};
 const APP_ID: &str = "kraken";
 const APP_VERSION: &str = "0.0.1+";
 
+/*
+ * The role of main function is just to initialize the terminal, the app context and
+ * the main state machine. The run_app function is resppnsible for handling the event listener,
+ * forwarding the event to the main state machine and rendering or painting to the terminal.
+ *
+ * All the application logic is implemented through the main state machine.
+ *
+ * * See below files for respective function
+ *
+ * __app.rs__: Defines the AppContext and the AppModel.
+ *
+ * __stm.rs__: Defines the State trait which each state has to implement.
+ * __stm/event.rs__: Defines the events consumed by the state machine.
+ * __stm/state_*.rs__: Each file defines one single state facilitating the readability of the code.
+ *
+ * __ui.rs__: Defines the ui compoents as functions called by the current state.
+ *
+ * __kraken/client.rs__: Defines the client proxy for comunintation with the Kraken API enpoint.
+ */
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   // initialize terminal state
   let mut xterm = terminal::XTerminal::new()?;
