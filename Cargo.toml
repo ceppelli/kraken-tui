@@ -6,6 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# https://crates.io/crates/thiserror
+thiserror = "1.0"
+# https://crates.io/crates/log
+log = "0.4"
+# https://crates.io/crates/simple_logger
+simple_logger = "4.1"
 # https://crates.io/crates/krakenrs
 krakenrs = "5.2.3"
 # https://crates.io/crates/crossterm
