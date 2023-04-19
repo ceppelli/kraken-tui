@@ -1,5 +1,5 @@
 use super::{events::Event, State, States};
-use crate::app::AppContext;
+use crate::app::Context;
 use crossterm::event::KeyCode;
 use tui::{backend::Backend, Frame};
 
@@ -7,31 +7,29 @@ use tui::{backend::Backend, Frame};
 pub struct HelpState;
 
 impl State for HelpState {
-  #[allow(clippy::let_and_return)]
-  fn on_event(&mut self, event: Event, ctx: &mut AppContext) -> Option<States> {
-    let to_state = match event {
-      Event::Key { key_code: KeyCode::Esc } => Some(States::PreviousOne),
-      _ => {
-        ctx.debug(format!("[HelpS] on_event {:?} not match", event));
-        None
-      },
-    };
-
-    to_state
+  fn on_event(&mut self, event: Event, ctx: &mut Context) -> Option<States> {
+    if let Event::Key { key_code: KeyCode::Esc } = event {
+      Some(States::PreviousOne)
+    } else {
+      ctx.debug(format!("[HelpS] on_event {event:?} not match"));
+      None
+    }
   }
 
-  fn ui<B: Backend>(&self, _f: &mut Frame<B>, _ctx: &mut AppContext) {}
+  fn ui<B: Backend>(&self, _f: &mut Frame<B>, _ctx: &mut Context) {}
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
+
+  use crate::{kraken::client::MockRestAPI, stm::events::Event};
+
+  use super::*;
 
   #[test]
   fn test_home_state() -> Result<(), String> {
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let mut help = HelpState;
 

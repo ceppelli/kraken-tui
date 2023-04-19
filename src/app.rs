@@ -1,9 +1,9 @@
-use crate::kraken::client::{Client, ClientImpl};
+use crate::kraken::client::{RestAPI, RestAPIImpl};
 use crate::ui::list_stateful_widget::StatefulList;
 use krakenrs::{AssetPairsResponse, AssetsResponse};
 
 #[derive(Debug)]
-pub struct AppModel {
+pub struct Model {
   pub assets: AssetsResponse,
   pub asset_pairs: AssetPairsResponse,
   pub debug_messages_stateful: StatefulList<String>,
@@ -13,9 +13,9 @@ pub struct AppModel {
   pub favorites_asset_pairs_info_stateful: StatefulList<String>,
 }
 
-impl AppModel {
-  pub fn new() -> AppModel {
-    AppModel {
+impl Model {
+  pub fn new() -> Model {
+    Model {
       assets: AssetsResponse::new(),
       asset_pairs: AssetPairsResponse::new(),
       debug_messages_stateful: StatefulList::new(),
@@ -27,21 +27,21 @@ impl AppModel {
   }
 }
 
-pub struct AppContext {
+pub struct Context {
   app_id: String,
   app_version: String,
 
-  pub model: AppModel,
-  pub kraken_api: Box<dyn Client>,
+  pub model: Model,
+  pub kraken_api: Box<dyn RestAPI>,
 }
 
-impl AppContext {
+impl Context {
   pub fn new(app_id: String, app_version: String) -> Self {
     Self {
       app_id,
       app_version,
-      model: AppModel::new(),
-      kraken_api: Box::new(ClientImpl::new(String::from("https://"))),
+      model: Model::new(),
+      kraken_api: Box::new(RestAPIImpl::new(String::from("https://"))),
     }
   }
 
@@ -56,16 +56,16 @@ impl AppContext {
 
 #[cfg(test)]
 mod mock_test {
-  use super::{AppContext, AppModel};
-  use crate::kraken::client::Client;
+  use super::{Context, Model};
+  use crate::kraken::client::RestAPI;
 
-  impl AppContext {
+  impl Context {
     #[allow(unused)]
-    pub fn new_for_testing(kraken_api: Box<dyn Client>) -> Self {
+    pub fn new_for_testing(kraken_api: Box<dyn RestAPI>) -> Self {
       Self {
         app_id: String::from("_app_id_"),
         app_version: String::from("_app_version_"),
-        model: AppModel::new(),
+        model: Model::new(),
         kraken_api,
       }
     }
@@ -76,11 +76,11 @@ mod mock_test {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::kraken::client::MockClient;
+  use crate::kraken::client::MockRestAPI;
 
   #[test]
   fn test_app_context() {
-    let ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
     assert_eq!(ctx.app_id, String::from("_app_id_"));
     assert_eq!(ctx.app_version, String::from("_app_version_"));
     assert_eq!(ctx.model.debug_messages_stateful.items.len(), 0);

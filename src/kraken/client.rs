@@ -5,7 +5,7 @@ use krakenrs::{
 #[cfg(test)]
 use mockall::{automock, predicate::*};
 #[cfg_attr(test, automock)]
-pub trait Client {
+pub trait RestAPI {
   fn connect(&mut self) -> Result<(), krakenrs::Error>;
   fn disconnect(&self) -> Result<(), krakenrs::Error>;
   fn list_assets(&self) -> Option<AssetsResponse>;
@@ -14,19 +14,19 @@ pub trait Client {
 }
 
 #[allow(unused)]
-pub struct ClientImpl {
+pub struct RestAPIImpl {
   url: String,
   api: Option<KrakenRestAPI>,
 }
 
-impl ClientImpl {
-  pub fn new(url: String) -> ClientImpl {
-    ClientImpl { url, api: None }
+impl RestAPIImpl {
+  pub fn new(url: String) -> RestAPIImpl {
+    RestAPIImpl { url, api: None }
   }
 }
 
 #[allow(unused)]
-impl Client for ClientImpl {
+impl RestAPI for RestAPIImpl {
   fn connect(&mut self) -> Result<(), krakenrs::Error> {
     let kc_config = KrakenRestConfig::default();
     let api = KrakenRestAPI::try_from(kc_config);

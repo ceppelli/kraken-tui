@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::must_use_candidate)]
 mod app;
 mod kraken;
 mod stm;
@@ -5,10 +8,13 @@ mod terminal;
 mod ui;
 use std::io;
 
-use app::AppContext;
+use log::{error, info};
+
 use crossterm::event::{self, Event, KeyCode};
-use stm::{events, stm_main::MainStm, States};
 use tui::{backend::Backend, Terminal};
+
+use crate::app::Context;
+use crate::stm::{events, stm_main::MainStm, States};
 
 const APP_ID: &str = "kraken";
 const APP_VERSION: &str = "0.0.1+";
@@ -38,26 +44,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   let mut xterm = terminal::XTerminal::new()?;
 
   // initialize app context and state machine
-  let mut ctx = AppContext::new(String::from(APP_ID), String::from(APP_VERSION));
+  let mut ctx = Context::new(String::from(APP_ID), String::from(APP_VERSION));
   let mut stm = MainStm::new("stm", true);
   let res = run_app(&mut xterm.terminal, &mut ctx, &mut stm, true);
 
   // check for errors
   if let Err(err) = res {
-    println!("[main] {:?}", err)
+    error!("[main] {err}");
   }
 
   // restore terminal state
   xterm.restore()?;
 
-  print!("[main] app info {} completed!!!", ctx.info());
+  info!("[main] app info {} completed!!!", ctx.info());
 
   Ok(())
 }
 
 fn run_app<B: Backend>(
   terminal: &mut Terminal<B>,
-  ctx: &mut AppContext,
+  ctx: &mut Context,
   stm: &mut MainStm,
   looping: bool,
 ) -> io::Result<()> {
@@ -83,10 +89,12 @@ fn run_app<B: Backend>(
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::kraken::client::MockClient;
   use krakenrs::AssetsResponse;
   use tui::{backend::TestBackend, Terminal};
+
+  use crate::kraken::client::MockRestAPI;
+
+  use super::*;
 
   #[test]
   fn test_app_id() {
@@ -103,13 +111,13 @@ mod tests {
     let backend = TestBackend::new(7, 4);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let mut mock_client = Box::new(MockClient::new());
+    let mut mock_client = Box::new(MockRestAPI::new());
     mock_client.expect_connect().once().returning(|| Ok(()));
     mock_client
       .expect_list_assets()
       .once()
       .returning(|| Some(AssetsResponse::new()));
-    let mut ctx = AppContext::new_for_testing(mock_client);
+    let mut ctx = Context::new_for_testing(mock_client);
     let mut stm = MainStm::new("stm", false);
 
     let result = run_app(&mut terminal, &mut ctx, &mut stm, false);

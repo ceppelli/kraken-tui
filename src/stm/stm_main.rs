@@ -1,5 +1,5 @@
 use super::{State, States};
-use crate::app::AppContext;
+use crate::app::Context;
 use crate::stm::events::Event;
 use crate::stm::state_debug::DebugState;
 use crate::stm::state_help::HelpState;
@@ -44,36 +44,33 @@ impl MainStm<'_> {
     }
   }
 
-  pub fn switch_state(&mut self, to_state: States, ctx: &mut AppContext) {
-    match to_state {
-      States::PreviousOne => {
-        if let Some(prev_state) = self.previous_st {
-          self.current_st = prev_state;
-          self.previous_st = None;
-        }
-      },
-      _ => {
-        self.previous_st = Some(self.current_st);
-        self.current_st = to_state;
+  pub fn switch_state(&mut self, to_state: States, ctx: &mut Context) {
+    if to_state == States::PreviousOne {
+      if let Some(prev_state) = self.previous_st {
+        self.current_st = prev_state;
+        self.previous_st = None;
+      }
+    } else {
+      self.previous_st = Some(self.current_st);
+      self.current_st = to_state;
 
-        match self.current_st {
-          States::Home => {
-            if self.home_st.on_enter_first {
-              self.home_st.on_enter_once(ctx);
-            }
-          },
-          States::Search => {
-            if self.search_st.on_enter_first {
-              self.search_st.on_enter_once(ctx);
-            }
-          },
-          _ => {},
-        }
-      },
+      match self.current_st {
+        States::Home => {
+          if self.home_st.on_enter_first {
+            self.home_st.on_enter_once(ctx);
+          }
+        },
+        States::Search => {
+          if self.search_st.on_enter_first {
+            self.search_st.on_enter_once(ctx);
+          }
+        },
+        _ => {},
+      }
     }
   }
 
-  pub fn on_event(&mut self, event: Event, ctx: &mut AppContext) {
+  pub fn on_event(&mut self, event: Event, ctx: &mut Context) {
     if self.current_st != States::Debug {
       ctx.debug(format!(
         "[STM] on_event {:?} state current:{:?} prev:{:?}",
@@ -82,14 +79,12 @@ impl MainStm<'_> {
     }
 
     match (self.current_st, event.clone()) {
-      (States::Unknown, Event::Key { key_code: KeyCode::Char('D') })
-      | (States::Home, Event::Key { key_code: KeyCode::Char('D') })
-      | (States::Search, Event::Key { key_code: KeyCode::Char('D') }) => {
-        self.switch_state(States::Debug, ctx)
-      },
-      (States::Home, Event::Key { key_code: KeyCode::Char('?') })
-      | (States::Search, Event::Key { key_code: KeyCode::Char('?') }) => {
-        self.switch_state(States::Help, ctx)
+      (
+        States::Unknown | States::Home | States::Search,
+        Event::Key { key_code: KeyCode::Char('D') },
+      ) => self.switch_state(States::Debug, ctx),
+      (States::Home | States::Search, Event::Key { key_code: KeyCode::Char('?') }) => {
+        self.switch_state(States::Help, ctx);
       },
       (States::Unknown, _) => {
         if let Some(to_state) = self.unknow_st.on_event(event, ctx) {
@@ -116,11 +111,11 @@ impl MainStm<'_> {
           self.switch_state(to_state, ctx);
         }
       },
-      _ => ctx.debug(format!("[STM] on_event {:?} not match", event)),
+      _ => ctx.debug(format!("[STM] on_event {event:?} not match")),
     }
   }
 
-  pub fn draw<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut AppContext) {
+  pub fn draw<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut Context) {
     // it Help is the current state, overlay to the previous state ui the help view.
     if self.current_st == States::Help {
       let text = match self.previous_st {
@@ -172,14 +167,16 @@ impl MainStm<'_> {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
   use krakenrs::{AssetPairsResponse, AssetsResponse};
 
+  use crate::{kraken::client::MockRestAPI, stm::events::Event};
+
+  use super::*;
+
   #[test]
   fn test_stm() -> Result<(), String> {
-    let mut mock_client = Box::new(MockClient::new());
+    let mut mock_client = Box::new(MockRestAPI::new());
     mock_client.expect_connect().once().returning(|| Ok(()));
     mock_client
       .expect_list_assets()
@@ -189,7 +186,7 @@ mod tests {
       .expect_list_asset_pairs()
       .once()
       .returning(|| Some(AssetPairsResponse::new()));
-    let mut ctx = AppContext::new_for_testing(mock_client);
+    let mut ctx = Context::new_for_testing(mock_client);
 
     let mut stm = MainStm::new("my_stm", false);
     assert_eq!(stm.name, "my_stm");

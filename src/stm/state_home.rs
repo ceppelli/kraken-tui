@@ -1,7 +1,7 @@
 use super::{events::Event, State, States};
 use crate::ui::core::draw_box;
 use crate::ui::list_stateful_widget::draw_stateful_list;
-use crate::{app::AppContext, ui::core::split_columns};
+use crate::{app::Context, ui::core::split_columns};
 use crossterm::event::KeyCode;
 use tui::{backend::Backend, Frame};
 
@@ -17,7 +17,7 @@ impl Default for HomeState {
 }
 
 impl HomeState {
-  fn show_asset_pair_info(&self, ctx: &mut AppContext) {
+  fn show_asset_pair_info(ctx: &mut Context) {
     ctx.model.favorites_asset_pairs_info_stateful.clear();
 
     let selected = ctx.model.favorites_asset_pairs_stateful.state.selected();
@@ -29,7 +29,7 @@ impl HomeState {
           .model
           .asset_pairs
           .iter()
-          .filter(|(_, pair)| pair.wsname == Some(asset_pair.to_owned()))
+          .filter(|(_, pair)| pair.wsname == Some(asset_pair.clone()))
           .map(|(_, pair)| pair)
           .collect::<Vec<_>>();
 
@@ -48,7 +48,7 @@ impl HomeState {
           stateful_list.push(format!("lot_multiplier:{}", pair.lot_multiplier));
           stateful_list.push("          fees:".to_owned());
           for fee in &pair.fees {
-            stateful_list.push(format!("             - {:?}", fee));
+            stateful_list.push(format!("             - {fee:?}"));
           }
           stateful_list.push(format!("      ordermin:{:?}", pair.ordermin));
         }
@@ -58,7 +58,7 @@ impl HomeState {
 }
 
 impl State for HomeState {
-  fn on_enter_once(&mut self, ctx: &mut AppContext) {
+  fn on_enter_once(&mut self, ctx: &mut Context) {
     self.on_enter_first = false;
     let result = ctx.kraken_api.connect();
     match result {
@@ -80,19 +80,18 @@ impl State for HomeState {
     }
   }
 
-  fn on_event(&mut self, event: Event, ctx: &mut AppContext) -> Option<States> {
-    #[allow(clippy::let_and_return)]
-    let to_state = match event {
+  fn on_event(&mut self, event: Event, ctx: &mut Context) -> Option<States> {
+    match event {
       Event::Key { key_code: KeyCode::Char('f') } => Some(States::Search),
       Event::Key { key_code: KeyCode::Down } => {
         ctx.model.favorites_asset_pairs_stateful.next();
-        self.show_asset_pair_info(ctx);
+        HomeState::show_asset_pair_info(ctx);
 
         None
       },
       Event::Key { key_code: KeyCode::Up } => {
         ctx.model.favorites_asset_pairs_stateful.previous();
-        self.show_asset_pair_info(ctx);
+        HomeState::show_asset_pair_info(ctx);
 
         None
       },
@@ -115,15 +114,13 @@ impl State for HomeState {
         None
       },
       _ => {
-        ctx.debug(format!("[HomeS] on_event {:?} not match", event));
+        ctx.debug(format!("[HomeS] on_event {event:?} not match"));
         None
       },
-    };
-
-    to_state
+    }
   }
 
-  fn ui<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut AppContext) {
+  fn ui<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut Context) {
     let size = f.size();
     draw_box(f, size, " Home State ");
 
@@ -160,15 +157,17 @@ impl State for HomeState {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
   use krakenrs::AssetsResponse;
   use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
+  use crate::{kraken::client::MockRestAPI, stm::events::Event};
+
+  use super::*;
+
   #[test]
   fn test_on_event() -> Result<(), String> {
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let mut state = HomeState::default();
 
@@ -201,13 +200,13 @@ mod tests {
 
   #[test]
   fn test_list_assets() -> Result<(), String> {
-    let mut mock_client = Box::new(MockClient::new());
+    let mut mock_client = Box::new(MockRestAPI::new());
     mock_client.expect_connect().once().returning(|| Ok(()));
     mock_client
       .expect_list_assets()
       .once()
       .returning(|| Some(AssetsResponse::new()));
-    let mut ctx = AppContext::new_for_testing(mock_client);
+    let mut ctx = Context::new_for_testing(mock_client);
 
     let mut state = HomeState::default();
     state.on_enter_once(&mut ctx);
@@ -223,7 +222,7 @@ mod tests {
 
   #[test]
   fn test_asset_pair_select() -> Result<(), String> {
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     ctx
       .model
@@ -295,7 +294,7 @@ mod tests {
   fn test_ui() {
     let backend = TestBackend::new(7, 4);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let state = HomeState::default();
 

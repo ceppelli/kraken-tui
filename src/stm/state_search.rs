@@ -1,5 +1,5 @@
 use super::{events::Event, State, States};
-use crate::app::AppContext;
+use crate::app::Context;
 use crate::ui::{
   core::{draw_box, split_columns},
   list_stateful_widget::draw_stateful_list,
@@ -25,7 +25,7 @@ impl Default for SearchState {
 }
 
 impl SearchState {
-  fn filter_asset_pairs(&self, ctx: &mut AppContext) {
+  fn filter_asset_pairs(ctx: &mut Context) {
     ctx.model.asset_pairs_stateful.clear();
 
     let selected = ctx.model.assets_stateful.state.selected();
@@ -38,7 +38,7 @@ impl SearchState {
           .asset_pairs
           .iter()
           .filter(|(_, pair)| pair.base == *asset)
-          .filter_map(|(_, pair)| pair.wsname.as_ref().map(|wsname| wsname.to_owned()))
+          .filter_map(|(_, pair)| pair.wsname.as_ref().map(std::borrow::ToOwned::to_owned))
           .collect::<Vec<String>>();
 
         for alt_name in pairs {
@@ -50,12 +50,12 @@ impl SearchState {
 }
 
 impl State for SearchState {
-  fn on_enter_once(&mut self, ctx: &mut AppContext) {
+  fn on_enter_once(&mut self, ctx: &mut Context) {
     self.on_enter_first = false;
     ctx.debug("[SearchS] on_enter_once".to_string());
 
     for key in ctx.model.assets.keys() {
-      ctx.model.assets_stateful.push(key.to_owned());
+      ctx.model.assets_stateful.push(key.clone());
     }
 
     let result = ctx.kraken_api.list_asset_pairs();
@@ -70,14 +70,13 @@ impl State for SearchState {
     }
   }
 
-  fn on_event(&mut self, event: Event, ctx: &mut AppContext) -> Option<States> {
-    #[allow(clippy::let_and_return)]
-    let to_state = match event {
+  fn on_event(&mut self, event: Event, ctx: &mut Context) -> Option<States> {
+    match event {
       Event::Key { key_code: KeyCode::Down } => {
         match self.avtive_column {
           ActiveColumn::Assets => {
             ctx.model.assets_stateful.next();
-            self.filter_asset_pairs(ctx);
+            SearchState::filter_asset_pairs(ctx);
           },
           ActiveColumn::AssetPairs => {
             ctx.model.asset_pairs_stateful.next();
@@ -89,7 +88,7 @@ impl State for SearchState {
         match self.avtive_column {
           ActiveColumn::Assets => {
             ctx.model.assets_stateful.previous();
-            self.filter_asset_pairs(ctx);
+            SearchState::filter_asset_pairs(ctx);
           },
           ActiveColumn::AssetPairs => {
             ctx.model.asset_pairs_stateful.previous();
@@ -134,8 +133,8 @@ impl State for SearchState {
                   .model
                   .asset_pairs
                   .iter()
-                  .filter(|(_, pair)| pair.wsname == Some(asset_pair.to_owned()))
-                  .filter_map(|(_, pair)| pair.wsname.as_ref().map(|wsname| wsname.to_owned()))
+                  .filter(|(_, pair)| pair.wsname == Some(asset_pair.clone()))
+                  .filter_map(|(_, pair)| pair.wsname.as_ref().map(std::borrow::ToOwned::to_owned))
                   .collect::<Vec<_>>();
 
                 if !pairs.is_empty() {
@@ -143,7 +142,7 @@ impl State for SearchState {
                   ctx
                     .model
                     .favorites_asset_pairs_stateful
-                    .push(key.to_owned());
+                    .push(key.clone());
                 }
               }
             }
@@ -153,15 +152,13 @@ impl State for SearchState {
       },
       Event::Key { key_code: KeyCode::Char('h') } => Some(States::Home),
       _ => {
-        ctx.debug(format!("[SearchS] on_event {:?} not match", event));
+        ctx.debug(format!("[SearchS] on_event {event:?} not match"));
         None
       },
-    };
-
-    to_state
+    }
   }
 
-  fn ui<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut AppContext) {
+  fn ui<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut Context) {
     let size = f.size();
     draw_box(f, size, " Search State ");
 
@@ -199,15 +196,17 @@ impl State for SearchState {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
   use krakenrs::AssetPairsResponse;
   use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
+  use crate::{kraken::client::MockRestAPI, stm::events::Event};
+
+  use super::*;
+
   #[test]
   fn test_on_event() -> Result<(), String> {
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let mut state = SearchState::default();
 
@@ -244,12 +243,12 @@ mod tests {
 
   #[test]
   fn test_list_asset_pairs() -> Result<(), String> {
-    let mut mock_client = Box::new(MockClient::new());
+    let mut mock_client = Box::new(MockRestAPI::new());
     mock_client
       .expect_list_asset_pairs()
       .once()
       .returning(|| Some(AssetPairsResponse::new()));
-    let mut ctx = AppContext::new_for_testing(mock_client);
+    let mut ctx = Context::new_for_testing(mock_client);
 
     ctx.model.assets_stateful.push("key_0".to_owned());
     ctx.model.assets_stateful.push("key_1".to_owned());
@@ -274,7 +273,7 @@ mod tests {
 
   #[test]
   fn test_asset_pair_select() -> Result<(), String> {
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     ctx.model.asset_pairs_stateful.push("ETH/USDC".to_owned());
     ctx.model.asset_pairs_stateful.push("pair_1".to_owned());
@@ -337,7 +336,7 @@ mod tests {
   fn test_ui() {
     let backend = TestBackend::new(7, 4);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let state = SearchState::default();
 

@@ -1,6 +1,6 @@
 use super::{events::Event, State, States};
 use crate::ui::core::{centered_rect, draw_box};
-use crate::{app::AppContext, ui::list_stateful_widget::draw_stateful_list};
+use crate::{app::Context, ui::list_stateful_widget::draw_stateful_list};
 use crossterm::event::KeyCode;
 use tui::{backend::Backend, Frame};
 
@@ -8,7 +8,7 @@ use tui::{backend::Backend, Frame};
 pub struct DebugState;
 
 impl State for DebugState {
-  fn on_event(&mut self, event: Event, ctx: &mut AppContext) -> Option<States> {
+  fn on_event(&mut self, event: Event, ctx: &mut Context) -> Option<States> {
     match event {
       Event::Key { key_code: KeyCode::Esc } => Some(States::PreviousOne),
       Event::Key { key_code: KeyCode::Down } => {
@@ -27,7 +27,7 @@ impl State for DebugState {
     }
   }
 
-  fn ui<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut AppContext) {
+  fn ui<B: Backend>(&self, f: &mut Frame<B>, ctx: &mut Context) {
     let size = f.size();
     draw_box(f, size, " Debug State ");
 
@@ -44,14 +44,16 @@ impl State for DebugState {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use crate::{kraken::client::MockClient, stm::events::Event};
   use crossterm::event::KeyCode;
   use tui::{backend::TestBackend, buffer::Buffer, Terminal};
 
+  use crate::{kraken::client::MockRestAPI, stm::events::Event};
+
+  use super::*;
+
   #[test]
   fn test_debug_state() -> Result<(), String> {
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let mut debug = DebugState;
 
@@ -78,7 +80,7 @@ mod tests {
   fn test_ui() {
     let backend = TestBackend::new(7, 4);
     let mut terminal = Terminal::new(backend).unwrap();
-    let mut ctx = AppContext::new_for_testing(Box::new(MockClient::new()));
+    let mut ctx = Context::new_for_testing(Box::new(MockRestAPI::new()));
 
     let state = DebugState;
 

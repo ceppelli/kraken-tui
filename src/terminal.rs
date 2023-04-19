@@ -8,6 +8,7 @@ use std::io::{self, Stdout};
 
 use tui::{backend::CrosstermBackend, Terminal};
 
+#[allow(clippy::module_name_repetitions)]
 pub struct XTerminal {
   pub terminal: tui::Terminal<CrosstermBackend<Stdout>>,
 }
